@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Gym CRM API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: members
+    description: Member management
+  - name: notifications
+    description: Notification management
+  - name: analytics
+    description: Analytics and reporting
+  - name: settings
+    description: App settings
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +33,444 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: authRegister
+      tags: [auth]
+      summary: Register admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "200":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/refresh:
+    post:
+      operationId: authRefresh
+      tags: [auth]
+      summary: Refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: authMe
+      tags: [auth]
+      summary: Get current admin
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Admin profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminResponse"
+
+  /auth/admin-exists:
+    get:
+      operationId: checkAdminExists
+      tags: [auth]
+      summary: Check if admin exists
+      responses:
+        "200":
+          description: Admin existence check
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminExistsResponse"
+
+  /members:
+    get:
+      operationId: getMembers
+      tags: [members]
+      summary: Get all members
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Active, "Expiring Soon", Expired]
+        - name: packageType
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Members list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembersListResponse"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Create a member
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberResponse"
+
+  /members/{id}:
+    get:
+      operationId: getMember
+      tags: [members]
+      summary: Get member by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberResponse"
+    put:
+      operationId: updateMember
+      tags: [members]
+      summary: Update member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MemberInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberResponse"
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Delete member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /members/{id}/remind:
+    post:
+      operationId: sendMemberReminder
+      tags: [members]
+      summary: Send reminder to member
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reminder sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get all notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationsListResponse"
+
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadCount
+      tags: [notifications]
+      summary: Get unread notification count
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnreadCountResponse"
+
+  /notifications/{id}/read:
+    put:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/read-all:
+    put:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/clear-all:
+    delete:
+      operationId: clearAllNotifications
+      tags: [notifications]
+      summary: Clear all notifications
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: All cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /analytics/summary:
+    get:
+      operationId: getAnalyticsSummary
+      tags: [analytics]
+      summary: Get analytics summary
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsSummaryResponse"
+
+  /analytics/monthly-signups:
+    get:
+      operationId: getMonthlySignups
+      tags: [analytics]
+      summary: Get monthly signups
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Monthly signups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyDataResponse"
+
+  /analytics/revenue:
+    get:
+      operationId: getRevenueData
+      tags: [analytics]
+      summary: Get revenue data
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Revenue data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyDataResponse"
+
+  /analytics/packages:
+    get:
+      operationId: getPackageDistribution
+      tags: [analytics]
+      summary: Get package distribution
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Package distribution
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDistributionResponse"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get settings
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettingsResponse"
+
+  /settings/test-email:
+    post:
+      operationId: sendTestEmail
+      tags: [settings]
+      summary: Send test email
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Test email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +480,416 @@ components:
       required:
         - status
 
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            accessToken:
+              type: string
+            refreshToken:
+              type: string
+            admin:
+              $ref: "#/components/schemas/Admin"
+          required:
+            - accessToken
+            - refreshToken
+            - admin
+        message:
+          type: string
+      required:
+        - success
+
+    AdminResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Admin"
+      required:
+        - success
+
+    AdminExistsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            exists:
+              type: boolean
+          required:
+            - exists
+      required:
+        - success
+
+    Admin:
+      type: object
+      properties:
+        _id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        gymName:
+          type: string
+        gymAddress:
+          type: string
+        gymPhone:
+          type: string
+        gymLogo:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - _id
+        - fullName
+        - email
+        - gymName
+
+    RegisterRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        gymName:
+          type: string
+        gymAddress:
+          type: string
+        gymPhone:
+          type: string
+        gymLogo:
+          type: string
+      required:
+        - fullName
+        - email
+        - password
+        - gymName
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required:
+        - refreshToken
+
+    Member:
+      type: object
+      properties:
+        _id:
+          type: string
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        profilePhoto:
+          type: string
+        packageType:
+          type: string
+          enum: [Daily, Monthly, "6 Months", "1 Year"]
+        packageStartDate:
+          type: string
+        packageEndDate:
+          type: string
+        totalFeesPaid:
+          type: number
+        notes:
+          type: string
+        lastReminderSent:
+          type: string
+        status:
+          type: string
+        daysRemaining:
+          type: integer
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - _id
+        - fullName
+        - email
+        - phone
+        - packageType
+        - packageStartDate
+        - packageEndDate
+
+    MemberInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        profilePhoto:
+          type: string
+        packageType:
+          type: string
+          enum: [Daily, Monthly, "6 Months", "1 Year"]
+        packageStartDate:
+          type: string
+        totalFeesPaid:
+          type: number
+        notes:
+          type: string
+      required:
+        - fullName
+        - email
+        - phone
+        - packageType
+        - packageStartDate
+
+    MemberResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Member"
+        message:
+          type: string
+      required:
+        - success
+
+    MembersListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: "#/components/schemas/Member"
+            total:
+              type: integer
+            page:
+              type: integer
+            totalPages:
+              type: integer
+          required:
+            - members
+            - total
+      required:
+        - success
+
+    Notification:
+      type: object
+      properties:
+        _id:
+          type: string
+        type:
+          type: string
+          enum: [renewal_alert, new_member, member_deleted, manual_reminder]
+        title:
+          type: string
+        message:
+          type: string
+        memberId:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - _id
+        - type
+        - title
+        - message
+        - isRead
+        - createdAt
+
+    NotificationsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+      required:
+        - success
+
+    UnreadCountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            count:
+              type: integer
+          required:
+            - count
+      required:
+        - success
+
+    AnalyticsSummary:
+      type: object
+      properties:
+        totalMembers:
+          type: integer
+        activeMembers:
+          type: integer
+        expiringThisWeek:
+          type: integer
+        expiredMembers:
+          type: integer
+        recentMembers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Member"
+      required:
+        - totalMembers
+        - activeMembers
+        - expiringThisWeek
+        - expiredMembers
+        - recentMembers
+
+    AnalyticsSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/AnalyticsSummary"
+      required:
+        - success
+
+    MonthlyDataPoint:
+      type: object
+      properties:
+        month:
+          type: string
+        value:
+          type: number
+      required:
+        - month
+        - value
+
+    MonthlyDataResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyDataPoint"
+      required:
+        - success
+
+    PackageDataPoint:
+      type: object
+      properties:
+        packageType:
+          type: string
+        count:
+          type: integer
+      required:
+        - packageType
+        - count
+
+    PackageDistributionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackageDataPoint"
+      required:
+        - success
+
+    Settings:
+      type: object
+      properties:
+        gymName:
+          type: string
+        gymAddress:
+          type: string
+        gymPhone:
+          type: string
+        gymLogo:
+          type: string
+        emailUser:
+          type: string
+        adminFullName:
+          type: string
+        adminEmail:
+          type: string
+      required:
+        - gymName
+
+    SettingsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Settings"
+      required:
+        - success
+
+    SettingsInput:
+      type: object
+      properties:
+        gymName:
+          type: string
+        gymAddress:
+          type: string
+        gymPhone:
+          type: string
+        gymLogo:
+          type: string
+        emailUser:
+          type: string
+        emailPass:
+          type: string
+        adminFullName:
+          type: string
+        currentPassword:
+          type: string
+        newPassword:
+          type: string

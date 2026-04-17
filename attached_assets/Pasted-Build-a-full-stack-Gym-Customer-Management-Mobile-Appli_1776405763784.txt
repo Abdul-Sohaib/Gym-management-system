@@ -1,0 +1,475 @@
+Build a full-stack Gym Customer Management Mobile Application using React Native (Expo) for the frontend and Node.js + Express for the backend. This is a premium, production-grade single-gym CRM mobile app. Use the following strict tech stack and architecture.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Mobile App  : React Native with Expo (SDK 51+), Expo Router v3 (file-based routing)
+UI Library  : React Native Paper (Material Design 3) + custom styled components
+Navigation  : Expo Router (Stack + Tabs combined)
+Charts      : react-native-gifted-charts
+Animations  : React Native Reanimated 3 + Moti
+Forms       : React Hook Form + Zod
+HTTP Client : Axios
+Storage     : expo-secure-store (for JWT tokens)
+Icons       : @expo/vector-icons (MaterialCommunityIcons)
+Date Picker : @react-native-community/datetimepicker
+Image Pick  : expo-image-picker
+Toasts      : react-native-toast-message
+Backend     : Node.js, Express.js
+Database    : MongoDB with Mongoose
+Auth        : JWT (access token + refresh token), bcrypt
+Email       : Nodemailer with Gmail SMTP
+Scheduler   : node-cron (daily at 8:00 AM)
+Package     : npm ONLY — never use pnpm or yarn
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROJECT STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/
+├── mobile/                        → Expo React Native app
+│   ├── app/                       → Expo Router file-based routes
+│   │   ├── (auth)/
+│   │   │   ├── login.jsx
+│   │   │   └── register.jsx
+│   │   ├── (tabs)/
+│   │   │   ├── _layout.jsx        → Bottom tab navigator
+│   │   │   ├── index.jsx          → Dashboard tab
+│   │   │   ├── members.jsx        → Members tab
+│   │   │   ├── notifications.jsx  → Notifications tab
+│   │   │   └── settings.jsx       → Settings tab
+│   │   ├── members/
+│   │   │   ├── add.jsx            → Add member screen
+│   │   │   ├── [id].jsx           → Member detail screen
+│   │   │   └── edit/[id].jsx      → Edit member screen
+│   │   ├── _layout.jsx            → Root layout with auth guard
+│   │   └── index.jsx              → Root redirect
+│   ├── components/                → Reusable components
+│   ├── hooks/                     → Custom hooks
+│   ├── context/                   → AuthContext
+│   ├── services/                  → Axios API functions
+│   ├── utils/                     → Helpers, date utils, formatters
+│   ├── constants/                 → Colors, theme, config
+│   ├── app.json                   → Expo config
+│   └── package.json
+├── server/
+│   ├── controllers/               → auth, members, analytics, notifications, settings
+│   ├── models/                    → Admin, Member, Notification
+│   ├── routes/                    → Express route files
+│   ├── middleware/                → verifyToken, errorHandler
+│   ├── services/                  → emailService.js, cronService.js
+│   └── index.js
+├── package.json                   → root with concurrently script
+└── .env
+
+Root package.json scripts:
+  "dev": "concurrently \"npm run server\" \"npm run mobile\""
+  "server": "cd server && npm run dev"
+  "mobile": "cd mobile && npx expo start"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ENVIRONMENT VARIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/server/.env:
+  MONGODB_URI=your_mongodb_atlas_uri
+  JWT_SECRET=your_jwt_secret_key
+  JWT_REFRESH_SECRET=your_refresh_secret_key
+  PORT=5000
+  CLIENT_URL=exp://localhost:8081
+  EMAIL_USER=yourgym@gmail.com
+  EMAIL_PASS=your_16_char_gmail_app_password
+
+/mobile/.env (use expo-constants or app.json extra):
+  EXPO_PUBLIC_API_URL=http://YOUR_MACHINE_IP:5000/api
+
+IMPORTANT: On a real device or Expo Go, use your machine's local network IP (e.g. 192.168.x.x), NOT localhost — localhost doesn't work from a phone to a computer. In Replit, use the Replit server URL.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. THEME & DESIGN SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Dark premium fitness app. Define all colors in /mobile/constants/Colors.js:
+
+  background:    '#0f0f13'
+  surface:       '#1a1a24'
+  surfaceHigh:   '#22222e'
+  primary:       '#6366f1'
+  primaryLight:  '#818cf8'
+  secondary:     '#8b5cf6'
+  success:       '#22c55e'
+  warning:       '#f59e0b'
+  danger:        '#ef4444'
+  textPrimary:   '#f1f5f9'
+  textMuted:     '#94a3b8'
+  border:        '#2a2a3a'
+  cardBorder:    '#2e2e40'
+
+Typography: Use expo-google-fonts with @expo-google-fonts/plus-jakarta-sans. Weights: 400 (Regular), 500 (Medium), 600 (SemiBold).
+
+Define a theme.js with shared spacing, borderRadius (8, 12, 16, 24), shadow styles, and font sizes (12, 14, 16, 18, 20, 24, 28, 32).
+
+Build a ThemeProvider wrapping the whole app.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. AUTHENTICATION — ADMIN ONLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Only ONE admin account per gym. If admin already exists in DB, block /auth/register and redirect to login.
+
+Register screen fields:
+  - Admin full name
+  - Email address
+  - Password (bcrypt, salt 12)
+  - Gym name
+  - Gym address
+  - Gym phone number
+  - Gym logo (optional — expo-image-picker, store as base64 in DB)
+
+On register:
+  - Save admin + gym profile to DB
+  - Issue JWT access token (15min expiry)
+  - Issue refresh token (7 days expiry)
+  - Store BOTH tokens in expo-secure-store (NOT AsyncStorage — secure store only)
+
+Login screen: email + password → validate → store tokens → redirect to (tabs).
+
+Auth guard in root _layout.jsx:
+  - Check for stored access token on app launch
+  - If token valid → go to (tabs)
+  - If expired → try refresh token silently → if success, update stored token → go to (tabs)
+  - If no token → go to (auth)/login
+
+AuthContext provides: { admin, isLoading, login, logout, updateAdmin }
+
+Token refresh: Axios response interceptor auto-calls POST /api/auth/refresh on 401, retries once, else calls logout().
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. CUSTOMER MANAGEMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Member Mongoose schema:
+  - fullName (String, required)
+  - email (String, required)
+  - phone (String, required)
+  - profilePhoto (String, base64, optional)
+  - packageType (enum: "Daily", "Monthly", "6 Months", "1 Year")
+  - packageStartDate (Date, required)
+  - packageEndDate (Date, auto-calculated):
+      Daily    → +1 day
+      Monthly  → +30 days
+      6 Months → +180 days
+      1 Year   → +365 days
+  - totalFeesPaid (Number, default 0)
+  - notes (String, optional)
+  - lastReminderSent (Date)
+  - timestamps: true
+
+Status (computed):
+  Active        → endDate > today + 3 days
+  Expiring Soon → endDate within next 3 days
+  Expired       → endDate < today
+
+MEMBERS TAB — Members List Screen:
+  - Search bar at top (debounced 400ms) — search by name or email
+  - Horizontal filter pills: All / Active / Expiring Soon / Expired
+  - FlatList of MemberCard components (no table — this is mobile)
+  - Pull-to-refresh
+  - Each MemberCard shows:
+      Avatar (initials circle if no photo), name, phone, package badge,
+      status badge, days remaining, action icons (view, edit, remind, delete)
+  - Floating Action Button (FAB) at bottom right → navigates to members/add
+  - Empty state with icon and "No members found" message
+
+Add Member Screen (members/add.jsx):
+  - Full form with all fields
+  - Package type selector (segmented control or radio pills)
+  - Date picker for start date (@react-native-community/datetimepicker)
+  - End date auto-shown as read-only after start date + package selected
+  - Profile photo picker (expo-image-picker)
+  - React Hook Form + Zod validation, inline error messages
+  - Submit button with loading spinner
+
+Member Detail Screen (members/[id].jsx):
+  - Full profile card at top (photo, name, package, status)
+  - Days remaining circular progress indicator
+  - Info rows: email, phone, fees paid, notes, start/end dates
+  - Action buttons: Edit, Send Reminder, Delete (with confirmation Alert)
+  - Membership timeline section
+
+Edit Member Screen (members/edit/[id].jsx):
+  - Pre-filled form, same as add screen
+  - Recalculates end date if package or start date changes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. EMAIL NOTIFICATION SYSTEM (Nodemailer)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Create /server/services/emailService.js using Nodemailer.
+
+Transporter:
+  service: 'gmail'
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+
+Four email functions:
+
+A) sendRenewalReminderToCustomer(member, gymProfile)
+   To: member.email
+   Subject: "Your [Gym Name] membership is expiring soon!"
+   HTML body: gym logo, member name, package type, end date, gym phone + address
+   Use clean inline-CSS HTML email template
+
+B) sendRenewalAlertToAdmin(member, gymProfile, adminEmail)
+   To: adminEmail
+   Subject: "Renewal Alert: [Member Name] expires on [End Date]"
+   HTML body: member name, email, phone, package, end date, days remaining, app link
+
+C) sendWelcomeEmail(member, gymProfile)
+   To: member.email
+   Subject: "Welcome to [Gym Name]!"
+   HTML body: welcome message, membership details (package, start, end date)
+   Auto-triggered when new member is added.
+
+D) sendAdminNewMemberAlert(member, gymProfile, adminEmail)
+   To: adminEmail
+   Subject: "New Member Added: [Member Name]"
+   HTML body: new member summary
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. CRON JOB — DAILY RENEWAL CHECK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/server/services/cronService.js
+
+Schedule: '0 8 * * *' (8:00 AM daily)
+
+Job:
+1. Query members where endDate <= today+3 AND endDate >= yesterday
+2. Skip if lastReminderSent is today
+3. For each member:
+   a. sendRenewalReminderToCustomer
+   b. sendRenewalAlertToAdmin
+   c. Update lastReminderSent = today
+   d. Create Notification in DB
+   e. Log to console
+4. Per-member error handling — one failure doesn't stop others
+
+Initialize in server/index.js after MongoDB connects.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. NOTIFICATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Notification schema:
+  - type (enum: renewal_alert, new_member, member_deleted, manual_reminder)
+  - title, message (String)
+  - memberId (ref Member, optional)
+  - isRead (Boolean, default false)
+  - createdAt
+
+API:
+  GET    /api/notifications
+  GET    /api/notifications/unread-count
+  PUT    /api/notifications/:id/read
+  PUT    /api/notifications/read-all
+  DELETE /api/notifications/clear-all
+
+NOTIFICATIONS TAB screen:
+  - Tab icon shows red badge with unread count (using Expo Router badge prop)
+  - Filter tabs at top: All / Unread / Renewal / New Members
+  - FlatList of NotificationItem components
+  - Each item: colored icon by type, title, message, relative time ("2 hours ago")
+  - Swipe-to-dismiss (react-native-gesture-handler) to mark as read
+  - "Mark all as read" button in header right
+  - Empty state when no notifications
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. DASHBOARD TAB (HOME)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ScrollView-based dashboard with:
+
+Header section:
+  - Gym logo + name
+  - Greeting: "Good morning, [Admin Name]"
+  - Current date
+
+KPI Cards (2x2 grid using FlatList numColumns=2):
+  - Total Members
+  - Active Members
+  - Expiring This Week
+  - Expired Members
+  Each card: icon, label, big number, subtle trend text
+
+Charts section (react-native-gifted-charts):
+  1. BarChart — New members per month (last 12 months)
+  2. PieChart — Package type distribution with legend
+  3. LineChart — Monthly revenue (last 12 months)
+  All charts: dark themed, primary accent color, responsive width
+
+Expiring Soon section:
+  - Horizontal ScrollView of MemberMiniCard components for expiring members
+  - Each has name, package, end date, "Remind" button
+
+Recent Activity section:
+  - Last 5 members added
+  - Last 5 notifications
+
+Pull-to-refresh on entire ScrollView.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. SETTINGS TAB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ScrollView with sections using SectionList or manual grouping:
+
+A) Gym Profile
+   - Gym name, address, phone number (editable TextInputs)
+   - Gym logo (expo-image-picker with preview)
+   - Save button
+
+B) Admin Account
+   - Full name, email
+   - Save button
+
+C) Change Password
+   - Current password, new password, confirm new password
+   - Show/hide toggle on all password fields
+   - Inline Zod validation errors
+
+D) Email Configuration
+   - Gmail address input
+   - App Password input (secure text entry)
+   - "Send Test Email" button → calls POST /api/settings/test-email
+   - Helper text: "Use a Gmail App Password, not your regular Gmail password. Go to Google Account → Security → App Passwords to generate one."
+   - Save button
+
+E) Danger Zone
+   - "Logout" button (red, with confirmation Alert)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. REUSABLE COMPONENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Build each in its own file in /mobile/components/:
+
+  StatCard.jsx            → KPI card with icon, label, value, trend
+  MemberCard.jsx          → member list item with swipe actions
+  MemberMiniCard.jsx      → compact card for dashboard expiring section
+  PackageBadge.jsx        → colored pill (Daily=blue, Monthly=green, 6M=purple, 1Y=amber)
+  StatusBadge.jsx         → Active=green, Expiring=amber, Expired=red
+  NotificationItem.jsx    → notification list row
+  ConfirmDialog.jsx       → Alert-based confirmation (uses React Native Alert API)
+  AvatarCircle.jsx        → initials circle with color based on name hash
+  CircularProgress.jsx    → days remaining circular progress (SVG or Reanimated)
+  FormInput.jsx           → styled TextInput with label, error, icon support
+  LoadingScreen.jsx       → full screen centered ActivityIndicator
+  SkeletonLoader.jsx      → animated skeleton using Moti + Reanimated
+  EmptyState.jsx          → icon + title + subtitle for empty lists
+  SectionHeader.jsx       → section title with optional right action
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. BOTTOM TAB NAVIGATOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tabs in (tabs)/_layout.jsx using Expo Router Tabs:
+  - Dashboard  → MaterialCommunityIcons: view-dashboard
+  - Members    → MaterialCommunityIcons: account-group
+  - Notifications → MaterialCommunityIcons: bell (with badge)
+  - Settings   → MaterialCommunityIcons: cog
+
+Tab bar style:
+  backgroundColor: '#13131a'
+  borderTopColor: '#2a2a3a'
+  borderTopWidth: 0.5
+  Active tint: '#6366f1'
+  Inactive tint: '#94a3b8'
+  Label font: Plus Jakarta Sans, 11px
+
+Notification tab badge: fetch unread count on app focus, show red badge number.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+12. COMPLETE BACKEND API REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All same as before — backend is identical to the web version.
+
+Auth:
+  POST /api/auth/register
+  POST /api/auth/login
+  POST /api/auth/logout
+  POST /api/auth/refresh
+  GET  /api/auth/me
+
+Members:
+  GET    /api/members         (search, status, packageType, page, limit, sortBy, sortOrder)
+  POST   /api/members         → triggers welcome email + admin alert + notification
+  GET    /api/members/:id
+  PUT    /api/members/:id
+  DELETE /api/members/:id     → creates member_deleted notification
+  POST   /api/members/:id/remind → sends reminder emails + creates notification
+
+Analytics:
+  GET /api/analytics/summary
+  GET /api/analytics/monthly-signups
+  GET /api/analytics/revenue
+  GET /api/analytics/packages
+
+Notifications:
+  GET    /api/notifications
+  GET    /api/notifications/unread-count
+  PUT    /api/notifications/:id/read
+  PUT    /api/notifications/read-all
+  DELETE /api/notifications/clear-all
+
+Settings:
+  GET  /api/settings
+  PUT  /api/settings
+  POST /api/settings/test-email
+
+Response format: { success: true/false, data: {}, message: "", error: "" }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+13. ANIMATIONS & UX POLISH
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- Screen transitions: Expo Router stack uses slide animation by default — keep it
+- List items: use Moti's MotiView with fade-in + translateY on mount (staggered by index)
+- KPI cards: count-up animation on number render (Reanimated useAnimatedProps)
+- Tab bar: active icon scales up slightly with Reanimated
+- Buttons: scale(0.96) on press with Reanimated useAnimatedStyle
+- Skeleton loaders: pulse animation with Moti (background color loop)
+- Pull-to-refresh: native RefreshControl on all ScrollViews and FlatLists
+- Haptic feedback on important actions: expo-haptics on button press, delete confirm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+14. ERROR HANDLING & CODE QUALITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Backend:
+  - Global Express error handler middleware
+  - asyncHandler(fn) wrapper on all routes
+  - Index on Member.packageEndDate and Member.email
+
+Frontend:
+  - Axios instance with baseURL from EXPO_PUBLIC_API_URL
+  - Request interceptor: attach Authorization: Bearer  from expo-secure-store
+  - Response interceptor: on 401, call /auth/refresh, retry once, else logout
+  - All API calls wrapped in try/catch with react-native-toast-message feedback
+  - Loading states using local useState, skeleton loaders during initial fetch
+  - Network error handling: show "No internet connection" toast
+  - Image upload size validation (max 2MB) before base64 conversion
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+15. BUILD ORDER — FOLLOW EXACTLY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1.  Scaffold /mobile (expo init with blank TypeScript template) and /server
+2.  Install ALL dependencies with npm install — no pnpm ever
+3.  Set up MongoDB connection + Mongoose models
+4.  Build auth API: register → login → verifyToken → /auth/me → /auth/refresh
+5.  Build emailService.js with all 4 Nodemailer functions
+6.  Build member CRUD API with auto end-date calculation + email triggers
+7.  Build cronService.js + initialize in server/index.js
+8.  Build analytics endpoints
+9.  Build notifications endpoints
+10. Build settings endpoints
+11. Set up Expo Router file structure + root _layout.jsx with AuthContext + auth guard
+12. Build AuthContext + token storage with expo-secure-store
+13. Build Axios service layer with interceptors
+14. Build Login and Register screens
+15. Build bottom tab navigator shell
+16. Build all reusable components
+17. Build Dashboard tab with charts
+18. Build Members tab (list → add → detail → edit flow)
+19. Build Notifications tab
+20. Build Settings tab
+21. Add all animations (Moti + Reanimated)
+22. Add haptics (expo-haptics)
+23. Test full flow: register → login → add member → check dashboard → send reminder → check notifications
+
+Build this as a COMPLETE, FULLY WORKING React Native Expo application — not a scaffold. Every screen, component, animation, and API connection must be fully implemented and functional. Do not skip any section.
