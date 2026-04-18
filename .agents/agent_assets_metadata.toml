@@ -1,8 +1,0 @@
-uploads = []
-outputs = []
-
-[[generated]]
-id = "j0OGJj5aqpebeU1_4iiSt"
-uri = "file://artifacts/gym-app/assets/images/icon.png"
-type = "image"
-title = "generated_image"
