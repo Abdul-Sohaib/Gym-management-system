@@ -17,8 +17,9 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { FormInput } from "@/components/FormInput";
+import { API_BASE_URL_WITH_API_PREFIX } from "@/constants/env";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+const API_BASE = API_BASE_URL_WITH_API_PREFIX;
 
 export default function LoginScreen() {
   const colors = useColors();

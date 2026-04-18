@@ -1,6 +1,7 @@
 import { secureStorage } from "@/services/secureStorage";
+import { API_BASE_URL_WITH_API_PREFIX } from "@/constants/env";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+const API_BASE = API_BASE_URL_WITH_API_PREFIX;
 
 async function getToken(): Promise<string | null> {
   return await secureStorage.getItem("accessToken");

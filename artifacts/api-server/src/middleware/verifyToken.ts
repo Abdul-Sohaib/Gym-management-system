@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 
 export interface AuthRequest extends Request {
   adminId?: string;
@@ -15,8 +16,7 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
   }
 
   try {
-    const secret = process.env["JWT_SECRET"] || "default_jwt_secret";
-    const decoded = jwt.verify(token, secret) as { adminId: string };
+    const decoded = jwt.verify(token, env.jwtSecret) as { adminId: string };
     req.adminId = decoded.adminId;
     next();
   } catch {

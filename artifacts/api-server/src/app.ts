@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import mongoose from "mongoose";
+import { env } from "./config/env.js";
 import router from "./routes/index.js";
 import authRouter from "./routes/auth.js";
 import membersRouter from "./routes/members.js";
@@ -13,21 +14,26 @@ import { logger } from "./lib/logger.js";
 
 const app: Express = express();
 
-const MONGODB_URI = process.env["MONGODB_URI"] || "";
+let cronInitialized = false;
 
-if (MONGODB_URI) {
-  mongoose
-    .connect(MONGODB_URI)
-    .then(() => {
-      logger.info("MongoDB connected");
+async function connectMongoWithRetry(): Promise<void> {
+  try {
+    await mongoose.connect(env.mongoDbUri);
+    logger.info("MongoDB connected");
+
+    if (!cronInitialized) {
       initCronJobs();
-    })
-    .catch((err) => {
-      logger.error({ err }, "MongoDB connection failed");
-    });
-} else {
-  logger.warn("MONGODB_URI not set — running without database");
+      cronInitialized = true;
+    }
+  } catch (err) {
+    logger.error({ err }, "MongoDB connection failed. Retrying in 5 seconds.");
+    setTimeout(() => {
+      void connectMongoWithRetry();
+    }, 5000);
+  }
 }
+
+void connectMongoWithRetry();
 
 app.use(
   pinoHttp({

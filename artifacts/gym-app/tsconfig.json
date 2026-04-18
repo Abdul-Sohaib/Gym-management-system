@@ -3,11 +3,16 @@
   "compilerOptions": {
     "baseUrl": ".",
     "strict": true,
+
     "paths": {
-      "@/*": [
-        "./*"
-      ]
-    }
+      "@/*": ["./*"]
+    },
+
+    "types": ["react", "react-native"],
+
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
   },
   "include": [
     "**/*.ts",
@@ -15,9 +20,7 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
-  "references": [
-    {
-      "path": "../../lib/api-client-react"
-    }
+  "exclude": [
+    "node_modules"
   ]
 }

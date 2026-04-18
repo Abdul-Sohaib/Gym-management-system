@@ -7,19 +7,6 @@ const { pipeline } = require("stream/promises");
 let metroProcess = null;
 
 const projectRoot = path.resolve(__dirname, "..");
-
-function findWorkspaceRoot(startDir) {
-  let dir = startDir;
-  while (dir !== path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, "pnpm-workspace.yaml"))) {
-      return dir;
-    }
-    dir = path.dirname(dir);
-  }
-  throw new Error("Could not find workspace root (no pnpm-workspace.yaml found)");
-}
-
-const workspaceRoot = findWorkspaceRoot(projectRoot);
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 
 function exitWithError(message) {
@@ -67,8 +54,12 @@ function getDeploymentDomain() {
     return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
   }
 
+  if (process.env.EXPO_PUBLIC_API_BASE_URL) {
+    return stripProtocol(process.env.EXPO_PUBLIC_API_BASE_URL);
+  }
+
   console.error(
-    "ERROR: No deployment domain found. Set REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, or EXPO_PUBLIC_DOMAIN",
+    "ERROR: No deployment domain found. Set REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, EXPO_PUBLIC_DOMAIN, or EXPO_PUBLIC_API_BASE_URL",
   );
   process.exit(1);
 }
@@ -147,7 +138,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
   }
 
   metroProcess = spawn(
-    "pnpm",
+    "npm",
     [
       "exec",
       "expo",
@@ -229,7 +220,7 @@ async function downloadFile(url, outputPath) {
 
 async function downloadBundle(platform, timestamp) {
   const entryPath = path.resolve(projectRoot, "node_modules", "expo-router", "entry");
-  const bundlePath = path.relative(workspaceRoot, entryPath);
+  const bundlePath = path.relative(projectRoot, entryPath);
   const url = new URL(`http://localhost:8081/${bundlePath}.bundle`);
   url.searchParams.set("platform", platform);
   url.searchParams.set("dev", "false");
@@ -390,10 +381,7 @@ async function downloadAssets(assets, timestamp) {
     const output = path.join(outputDir, asset.filename);
 
     try {
-      const candidates = [
-        path.join(projectRoot, decodedPath, asset.filename),
-        path.join(workspaceRoot, decodedPath, asset.filename),
-      ];
+      const candidates = [path.join(projectRoot, decodedPath, asset.filename)];
       const found = candidates.find((p) => fs.existsSync(p));
       if (!found) {
         throw new Error(`Asset not found on disk: ${asset.filename}`);

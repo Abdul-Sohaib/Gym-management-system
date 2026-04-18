@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 
 interface GymProfile {
@@ -20,8 +21,8 @@ interface MemberData {
 }
 
 function createTransporter(gymProfile: GymProfile) {
-  const emailUser = gymProfile.emailUser || process.env["EMAIL_USER"];
-  const emailPass = gymProfile.emailPass || process.env["EMAIL_PASS"];
+  const emailUser = gymProfile.emailUser || env.smtpEmail;
+  const emailPass = gymProfile.emailPass || env.smtpPassword;
 
   if (!emailUser || !emailPass) {
     return null;
@@ -79,7 +80,7 @@ export async function sendRenewalReminderToCustomer(
   `;
 
   await transporter.sendMail({
-    from: gymProfile.emailUser || process.env["EMAIL_USER"],
+    from: gymProfile.emailUser || env.smtpEmail,
     to: member.email,
     subject: `Your ${gymProfile.gymName} membership is expiring soon!`,
     html,
@@ -119,7 +120,7 @@ export async function sendRenewalAlertToAdmin(
   `;
 
   await transporter.sendMail({
-    from: gymProfile.emailUser || process.env["EMAIL_USER"],
+    from: gymProfile.emailUser || env.smtpEmail,
     to: adminEmail,
     subject: `Renewal Alert: ${member.fullName} expires on ${endDateStr}`,
     html,
@@ -163,7 +164,7 @@ export async function sendWelcomeEmail(
   `;
 
   await transporter.sendMail({
-    from: gymProfile.emailUser || process.env["EMAIL_USER"],
+    from: gymProfile.emailUser || env.smtpEmail,
     to: member.email,
     subject: `Welcome to ${gymProfile.gymName}!`,
     html,
@@ -205,7 +206,7 @@ export async function sendAdminNewMemberAlert(
   `;
 
   await transporter.sendMail({
-    from: gymProfile.emailUser || process.env["EMAIL_USER"],
+    from: gymProfile.emailUser || env.smtpEmail,
     to: adminEmail,
     subject: `New Member Added: ${member.fullName}`,
     html,

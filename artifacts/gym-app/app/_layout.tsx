@@ -12,7 +12,6 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { setBaseUrl } from "@workspace/api-client-react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -20,8 +19,6 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
-
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
 function RootLayoutNav() {
   const { admin, isLoading } = useAuth();

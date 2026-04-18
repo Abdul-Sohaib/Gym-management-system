@@ -1,16 +1,16 @@
 {
   "extends": "./tsconfig.base.json",
-  "compileOnSave": false,
-  "files": [],
-  "references": [
-    {
-      "path": "./lib/db"
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@gym-client-hub/db": ["lib/db"],
+      "@gym-client-hub/api-zod": ["lib/api-zod"],
+      "@gym-client-hub/api-client-react": ["lib/api-client-react"]
     },
-    {
-      "path": "./lib/api-client-react"
-    },
-    {
-      "path": "./lib/api-zod"
-    }
+    "skipLibCheck": true
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 import { Admin } from "../models/Admin.js";
 import { verifyToken, AuthRequest } from "../middleware/verifyToken.js";
 
@@ -10,11 +11,8 @@ const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY = "7d";
 
 function generateTokens(adminId: string) {
-  const secret = process.env["JWT_SECRET"] || "default_jwt_secret";
-  const refreshSecret = process.env["JWT_REFRESH_SECRET"] || "default_refresh_secret";
-
-  const accessToken = jwt.sign({ adminId }, secret, { expiresIn: ACCESS_TOKEN_EXPIRY });
-  const refreshToken = jwt.sign({ adminId }, refreshSecret, { expiresIn: REFRESH_TOKEN_EXPIRY });
+  const accessToken = jwt.sign({ adminId }, env.jwtSecret, { expiresIn: ACCESS_TOKEN_EXPIRY });
+  const refreshToken = jwt.sign({ adminId }, env.jwtRefreshSecret, { expiresIn: REFRESH_TOKEN_EXPIRY });
 
   return { accessToken, refreshToken };
 }
@@ -136,8 +134,7 @@ router.post("/refresh", async (req, res) => {
       return;
     }
 
-    const refreshSecret = process.env["JWT_REFRESH_SECRET"] || "default_refresh_secret";
-    const decoded = jwt.verify(refreshToken, refreshSecret) as { adminId: string };
+    const decoded = jwt.verify(refreshToken, env.jwtRefreshSecret) as { adminId: string };
 
     const admin = await Admin.findById(decoded.adminId);
     if (!admin) {

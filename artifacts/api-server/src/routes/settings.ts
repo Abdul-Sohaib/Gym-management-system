@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Router } from "express";
 import nodemailer from "nodemailer";
+import { env } from "../config/env.js";
 import { Admin } from "../models/Admin.js";
 import { verifyToken, AuthRequest } from "../middleware/verifyToken.js";
 
@@ -90,18 +91,21 @@ router.put("/", verifyToken, async (req: AuthRequest, res) => {
 router.post("/test-email", verifyToken, async (req: AuthRequest, res) => {
   try {
     const admin = await Admin.findById(req.adminId);
-    if (!admin || !admin.emailUser || !admin.emailPass) {
+    const smtpUser = admin?.emailUser || env.smtpEmail;
+    const smtpPass = admin?.emailPass || env.smtpPassword;
+
+    if (!admin || !smtpUser || !smtpPass) {
       res.status(400).json({ success: false, error: "Email not configured" });
       return;
     }
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
-      auth: { user: admin.emailUser, pass: admin.emailPass },
+      auth: { user: smtpUser, pass: smtpPass },
     });
 
     await transporter.sendMail({
-      from: admin.emailUser,
+      from: smtpUser,
       to: admin.email,
       subject: `Test Email from ${admin.gymName} CRM`,
       html: `<p>This is a test email from your ${admin.gymName} gym CRM. Email is working correctly!</p>`,

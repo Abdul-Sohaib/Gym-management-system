@@ -1,8 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { secureStorage } from "@/services/secureStorage";
-
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+import { API_BASE_URL } from "@/constants/env";
 
 export interface Admin {
   _id: string;
@@ -25,8 +23,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-setBaseUrl(API_BASE);
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -37,7 +33,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await secureStorage.deleteItem("refreshToken");
     setAdmin(null);
     setAccessToken(null);
-    setAuthTokenGetter(() => null);
   }, []);
 
   const login = useCallback(async (token: string, refreshToken: string, adminData: Admin) => {
@@ -45,7 +40,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await secureStorage.setItem("refreshToken", refreshToken);
     setAdmin(adminData);
     setAccessToken(token);
-    setAuthTokenGetter(() => token);
   }, []);
 
   const updateAdmin = useCallback((updates: Partial<Admin>) => {
@@ -64,9 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (token) {
-          setAuthTokenGetter(() => token);
           try {
-            const response = await fetch(`${API_BASE}/api/auth/me`, {
+            const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (response.ok) {
@@ -81,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (refresh) {
           try {
-            const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+            const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ refreshToken: refresh }),
@@ -92,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await secureStorage.setItem("refreshToken", data.data.refreshToken);
               setAdmin(data.data.admin);
               setAccessToken(data.data.accessToken);
-              setAuthTokenGetter(() => data.data.accessToken);
             } else {
               await logout();
             }
